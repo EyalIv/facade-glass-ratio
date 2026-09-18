@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>יחס זכוכית לחזית</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#EEECE7; --stage:#F2F3F4; --dot:#D8DBDF; --panel:#F8F7F4; --surface:#FFFFFF; --callout:#F4F2EC;
+  --ink:#16181B; --ink-2:#5C6166; --ink-3:#8A8E92; --on-ink:#FFFFFF; --rule:#DAD7D0; --rule-2:#ECEAE5; --chip:#ECEAE5;
+  --glass:#3576C9; --frame:#A7AFB8; --stone:#D2C19C; --slab:#8A826E; --line3d:#6E7378;
+  --alert:#B4380D; --alert-bg:#FBEAE2; --alert-ink:#A8340C; --ok:#2E7D4F; --ok-bg:#E4F1E8; --ok-ink:#256B42;
+  --focus:#3576C9; --shadow:rgba(22,24,27,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#121518; --stage:#161A1E; --dot:#262C32; --panel:#181C20; --surface:#1E2328; --callout:#23292F;
+    --ink:#E8ECEE; --ink-2:#9AA5AD; --ink-3:#6F7A82; --on-ink:#121518; --rule:#2C333A; --rule-2:#252B31; --chip:#282E34;
+    --glass:#5AA0EC; --frame:#7E8894; --stone:#C9BE9F; --slab:#77755F; --line3d:#8A949C;
+    --alert:#F08A68; --alert-bg:#3A2019; --alert-ink:#F4A386; --ok:#5CC08A; --ok-bg:#16301F; --ok-ink:#7FD3A4;
+    --focus:#7CB8F5; --shadow:rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#121518; --stage:#161A1E; --dot:#262C32; --panel:#181C20; --surface:#1E2328; --callout:#23292F;
+  --ink:#E8ECEE; --ink-2:#9AA5AD; --ink-3:#6F7A82; --on-ink:#121518; --rule:#2C333A; --rule-2:#252B31; --chip:#282E34;
+  --glass:#5AA0EC; --frame:#7E8894; --stone:#C9BE9F; --slab:#77755F; --line3d:#8A949C;
+  --alert:#F08A68; --alert-bg:#3A2019; --alert-ink:#F4A386; --ok:#5CC08A; --ok-bg:#16301F; --ok-ink:#7FD3A4;
+  --focus:#7CB8F5; --shadow:rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans Hebrew","Segoe UI","Arial Hebrew",sans-serif;
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ---------- shell ---------- */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:560px}
+.top{height:64px;flex-shrink:0;padding:0 20px;display:flex;align-items:center;gap:12px;background:var(--panel);border-bottom:1px solid var(--rule)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand h1{font-size:16px;font-weight:600;margin:0;line-height:1.2}
+.brand p{margin:0;font-size:12px;color:var(--ink-2);line-height:1.3}
+.spacer{flex:1}
+.src{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:14px;background:var(--chip);font-size:12px;color:var(--ink-2);white-space:nowrap}
+.src .num{font-size:11px}
+.btn{height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--ink-3)}
+.btn.icon{width:36px;padding:0;justify-content:center}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:380px minmax(0,1fr) 360px;grid-template-rows:minmax(0,1fr);grid-template-areas:"params stage result"}
+.sheet{display:contents}
+.mhead{display:none}
+
+/* ---------- parameters ---------- */
+.params{grid-area:params;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-inline-end:1px solid var(--rule)}
+.tabs{display:flex;gap:24px;height:48px;padding:0 20px;border-bottom:1px solid var(--rule);flex-shrink:0}
+.tabs button,.mtabs button{padding:0;border:0;border-bottom:2px solid transparent;background:none;font-size:14px;color:var(--ink-2)}
+.tabs button[aria-selected="true"],.mtabs button[aria-selected="true"]{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
+.pbody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:20px}
+.panel-params{display:flex;flex-direction:column;gap:16px}
+.panel-tech{display:none}
+.work[data-tab="tech"] .panel-tech{display:block}
+.work[data-tab="tech"] .panel-params{display:none}
+
+.card{padding:16px;display:flex;flex-direction:column;gap:16px;background:var(--surface);border:1px solid var(--rule);border-radius:12px}
+.card-title{font-size:13px;font-weight:600}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;background:var(--chip);border-radius:9px}
+.seg button{height:36px;border:0;border-radius:7px;background:transparent;font-size:13px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);font-weight:500}
+
+.ctl{display:flex;flex-direction:column;gap:8px}
+.ctl .row{display:flex;align-items:center;gap:6px}
+.ctl label{font-size:13px;font-weight:500}
+.tag{display:none;font-size:11px;color:var(--ink-2);padding:1px 6px;border-radius:4px;background:var(--chip)}
+.ctl[data-computed="true"] .tag{display:inline}
+.ctl[data-computed="true"] .row label,.ctl[data-computed="true"] input[type=range]{opacity:.55}
+.info{position:relative;width:22px;height:22px;padding:0;border:0;background:none;color:var(--ink-3);display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+.info:hover{color:var(--ink)}
+.info .ico{width:14px;height:14px}
+.info::after{
+  content:attr(data-tip); position:absolute; top:calc(100% + 6px); inset-inline-start:-8px; width:232px;
+  padding:8px 10px; border-radius:8px; background:var(--ink); color:var(--on-ink);
+  font-size:12px; line-height:1.45; font-weight:400; text-align:start;
+  opacity:0; visibility:hidden; pointer-events:none; z-index:20; box-shadow:0 6px 18px var(--shadow);
+  transition:opacity .12s;
+}
+.info:hover::after,.info:focus-visible::after{opacity:1;visibility:visible}
+.field{margin-inline-start:auto;display:flex;align-items:center;height:30px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);overflow:hidden}
+.field:focus-within{border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 22%,transparent)}
+.field input{width:60px;height:28px;border:0;padding:0 6px;font-size:13px;text-align:center;background:transparent;outline:none}
+.field .u{padding:0 8px;font-size:12px;color:var(--ink-2);border-inline-start:1px solid var(--rule-2);line-height:28px;white-space:nowrap}
+.ctl[data-computed="true"] .field{border-style:dashed;background:transparent}
+
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:2px; margin:7px 0; cursor:pointer;
+  background:linear-gradient(to left,var(--ink) var(--p,0%),var(--rule) var(--p,0%));
+}
+input[type=range]:disabled{cursor:default;background:linear-gradient(to left,var(--ink-3) var(--p,0%),var(--rule-2) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--surface);border:2px solid var(--ink);box-shadow:0 1px 3px var(--shadow)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--ink)}
+input[type=range]:disabled::-webkit-slider-thumb{border-color:var(--ink-3);box-shadow:none}
+input[type=range]:disabled::-moz-range-thumb{border-color:var(--ink-3)}
+input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:6px}
+
+details.sec{border-top:1px solid var(--rule);padding-top:14px}
+details.sec summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:28px;border-radius:6px}
+details.sec summary::-webkit-details-marker{display:none}
+.sec-h{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sec-t{font-size:14px;font-weight:600}
+.sec-s{font-size:12px;color:var(--ink-2)}
+details[open] .sec-s{display:none}
+details[open] summary .chev{transform:rotate(180deg)}
+.chev{transition:transform .15s}
+.sec-body{display:flex;flex-direction:column;gap:16px;padding:16px 0 6px}
+
+.techgrid{margin:0}
+.techgrid div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--rule-2);font-size:13px}
+.techgrid dt{color:var(--ink-2)} .techgrid dd{margin:0;text-align:end}
+.tech-note{font-size:12px;color:var(--ink-2);margin:14px 0 0}
+
+/* ---------- stage ---------- */
+.stage{
+  grid-area:stage; position:relative; min-width:0; min-height:0; overflow:hidden;
+  background-color:var(--stage); background-image:radial-gradient(var(--dot) 1px,transparent 1.3px); background-size:18px 18px;
+}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#view:active{cursor:grabbing}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;font-size:11px;color:var(--ink-2);white-space:nowrap}
+.lbl.dim{padding:1px 6px;background:var(--stage);border-radius:4px}
+.lbl.vert{writing-mode:vertical-rl}
+.viewseg{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:2px;padding:3px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:0 2px 8px var(--shadow)}
+.viewseg button{height:32px;padding:0 16px;border:0;border-radius:7px;background:transparent;font-size:13px;color:var(--ink-2)}
+.viewseg button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);font-weight:500}
+.zoom{position:absolute;top:16px;inset-inline-end:16px;z-index:3;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px var(--shadow)}
+.zoom button{width:36px;height:36px;padding:0;border:0;background:transparent;display:flex;align-items:center;justify-content:center}
+.zoom button+button{border-top:1px solid var(--rule-2)}
+.zoom button:hover{background:var(--chip)}
+.hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--ink-2);white-space:nowrap;pointer-events:none}
+
+/* ---------- result ---------- */
+.result{grid-area:result;min-height:0;overflow-y:auto;padding:26px 24px;display:flex;flex-direction:column;gap:18px;background:var(--surface);border-inline-start:1px solid var(--rule)}
+.r-head{display:flex;flex-direction:column;gap:6px}
+.r-label{font-size:13px;color:var(--ink-2)}
+.big{direction:ltr;display:flex;justify-content:flex-end;align-items:baseline;gap:4px;font-family:"Frank Ruhl Libre",Georgia,serif;font-weight:300;line-height:.95;color:var(--ink);transition:color .2s}
+.big .v{font-size:92px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big .pc{font-size:40px}
+.big.over{color:var(--alert)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:var(--chip);color:var(--ink-2);font-size:12px;font-weight:500;white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:3px;background:currentColor}
+.chip.alert{background:var(--alert-bg);color:var(--alert-ink)}
+.chip.ok{background:var(--ok-bg);color:var(--ok-ink)}
+
+.r-barwrap{display:flex;flex-direction:column;gap:4px}
+.ticklegend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink-2)}
+.ticklegend > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ticklegend .num{color:var(--ink)}
+.tk-th{width:0;height:12px;border-inline-start:2px solid var(--alert)}
+.tk-tg{width:0;height:12px;border-inline-start:2px dashed var(--ink)}
+.bar{position:relative;height:26px}
+.bar .track{position:absolute;inset-inline:0;top:6px;height:14px;border-radius:4px;overflow:hidden;display:flex;background:var(--stone)}
+.bar .g{background:var(--glass);transition:width .2s}
+.bar .f{background:var(--frame);transition:width .2s}
+.tick{position:absolute;top:0;bottom:0;width:0;border-inline-start:2px solid var(--alert);transform:translateX(1px)}
+.tick.target{border-inline-start:2px dashed var(--ink)}
+.bar.mini{height:14px}
+.bar.mini .track{top:3px;height:8px}
+
+.r-legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.r-legend div{display:flex;align-items:center;gap:8px}
+.r-legend i{width:10px;height:10px;border-radius:2px}
+.r-legend span:nth-child(2){flex:1}
+.sw-g{background:var(--glass)} .sw-f{background:var(--frame)} .sw-w{background:var(--stone)}
+
+.callout{display:flex;gap:10px;padding:14px;border-radius:10px;background:var(--callout);font-size:13px;line-height:1.55}
+.callout b{font-weight:600}
+.callout .ico{width:18px;height:18px;margin-top:2px}
+.callout .i-warn{color:var(--alert)} .callout .i-ok{color:var(--ok)}
+.callout.warn .i-ok,.callout.ok .i-warn{display:none}
+
+.r-win{display:flex;gap:18px;align-items:flex-end;padding-top:18px;border-top:1px solid var(--rule-2)}
+.bay{position:relative;flex-shrink:0;height:112px;background:var(--stone)}
+.bay .slab{position:absolute;top:0;left:0;right:0;background:var(--slab)}
+.bay .win{position:absolute;background:var(--glass);border-style:solid;border-color:var(--frame)}
+.r-win dl{flex:1;margin:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.r-win dl div{display:flex;justify-content:space-between;gap:8px}
+.r-win dt{color:var(--ink-2)} .r-win dd{margin:0}
+.r-win .ttl{font-weight:600;color:var(--ink)}
+
+.r-figs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--rule-2);border:1px solid var(--rule-2);border-radius:10px;overflow:hidden}
+.r-figs div{padding:10px 12px;background:var(--surface)}
+.r-figs .num{display:block;font-size:20px;line-height:1.3}
+.r-figs span:last-child{font-size:12px;color:var(--ink-2)}
+.linkbtn{align-self:flex-start;padding:0;border:0;background:none;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink)}
+.linkbtn:hover{color:var(--glass)}
+
+/* ---------- 900–1279: result becomes a strip under the facade ---------- */
+@media (max-width:1279px) and (min-width:900px){
+  .work{grid-template-columns:340px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"params stage" "params result"}
+  .result{
+    border-inline-start:0; border-top:1px solid var(--rule); padding:14px 20px; overflow:visible;
+    display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"head bar figs" "head call figs"; gap:8px 28px; align-items:center;
+  }
+  .r-head{grid-area:head} .r-barwrap{grid-area:bar} .callout{grid-area:call;padding:8px 12px} .r-figs{grid-area:figs;min-width:220px}
+  .r-legend,.r-win,.linkbtn{display:none}
+  .big .v{font-size:58px} .big .pc{font-size:26px}
+  .r-figs .num{font-size:16px}
+  .r-figs div{padding:6px 10px}
+}
+
+/* ---------- < 900: facade on top, bottom sheet ---------- */
+@media (max-width:899px){
+  .top{height:56px;padding:0 8px 0 16px;gap:4px}
+  .brand p,.src,.reset-label{display:none}
+  .brand h1{font-size:15px}
+  .btn{border:0;background:transparent;width:44px;height:44px;padding:0;justify-content:center}
+  .work{display:flex;flex-direction:column}
+  .stage{height:44vh;height:44dvh;min-height:260px;flex-shrink:0}
+  .hint,.zoom{display:none}
+  .viewseg{top:12px}
+  .viewseg button{height:38px;padding:0 18px}
+  .sheet{
+    display:block; flex:1; min-height:0; overflow-y:auto; margin-top:-18px; position:relative; z-index:5;
+    background:var(--panel); border-radius:20px 20px 0 0; box-shadow:0 -8px 24px var(--shadow);
+  }
+  .mhead{display:block;position:sticky;top:0;z-index:4;background:var(--panel);border-radius:20px 20px 0 0}
+  .handle{height:20px;display:flex;align-items:center;justify-content:center}
+  .handle i{width:40px;height:4px;border-radius:2px;background:var(--rule)}
+  .mstrip{padding:0 20px 14px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--rule)}
+  .mstrip .row{display:flex;align-items:center;gap:14px}
+  .mstrip .big .v{font-size:48px} .mstrip .big .pc{font-size:24px}
+  .mstrip .col{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+  .mtabs{display:grid;grid-template-columns:repeat(3,1fr);height:46px;border-bottom:1px solid var(--rule)}
+  .params{border:0;background:transparent;display:block}
+  .params .tabs{display:none}
+  .pbody{overflow:visible;padding:16px 20px 40px}
+  .result{border:0;padding:20px 20px 40px;overflow:visible}
+  .work[data-tab="detail"] .params{display:none}
+  .work:not([data-tab="detail"]) .result{display:none}
+  .result .big .v{font-size:72px} .result .big .pc{font-size:32px}
+  .seg button{height:42px;font-size:14px}
+  .ctl label{font-size:14px}
+  .field{height:38px} .field input{height:36px;font-size:15px} .field .u{line-height:36px}
+  .info{width:32px;height:32px}
+  input[type=range]{margin:12px 0}
+  input[type=range]::-webkit-slider-thumb{width:24px;height:24px}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px}
+  details.sec summary{min-height:44px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="currentColor"/><rect x="6" y="6" width="5" height="12" rx="1" fill="#5B98E0"/><rect x="13" y="6" width="5" height="12" rx="1" fill="#5B98E0"/></svg>
+      <div>
+        <h1>יחס זכוכית לחזית</h1>
+        <p>חזית סכמטית של מגדל · <span class="num">Glass-to-Wall Ratio</span></p>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="src">
+      <svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
+      מקור: <span class="num">Window-to-Wall Ratio V5.gh</span>
+    </div>
+    <button type="button" class="btn" id="reset" aria-label="חזרה לערכי הקובץ">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+      <span class="reset-label">חזרה לערכי הקובץ</span>
+    </button>
+    <button type="button" class="btn icon" id="theme" aria-label="החלפת מצב תצוגה בהיר / כהה">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button>
+  </header>
+
+  <div class="work" id="work" data-tab="params">
+
+    <main class="stage" id="stage">
+      <canvas id="view" aria-label="חזית תלת־ממדית. גרירה לסיבוב, גלגלת לזום"></canvas>
+      <div class="labels" id="labels" aria-hidden="true">
+        <span class="lbl dim num" id="lblW"></span>
+      </div>
+      <div class="viewseg" role="group" aria-label="תצוגה">
+        <button type="button" id="vFront" aria-pressed="true">חזית</button>
+        <button type="button" id="v3d" aria-pressed="false">תלת־ממד</button>
+      </div>
+      <div class="zoom">
+        <button type="button" id="zIn" aria-label="התקרבות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" id="zOut" aria-label="התרחקות"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <button type="button" id="zFit" aria-label="התאמה למסך"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+      <div class="hint">גרירה לסיבוב · גלגלת לזום · Shift עם גרירה להזזה</div>
+    </main>
+
+    <div class="sheet">
+
+      <div class="mhead">
+        <div class="handle"><i></i></div>
+        <div class="mstrip" aria-live="polite">
+          <div class="row">
+            <div class="big" id="mBig"><span class="v" id="mVal">–</span><span class="pc">%</span></div>
+            <div class="col">
+              <span class="r-label" style="font-size:12px">זכוכית מתוך החזית</span>
+              <span class="chip" id="mChip"></span>
+            </div>
+          </div>
+          <div class="bar mini"><div class="track"><div class="g"></div><div class="f"></div></div><div class="tick th"></div><div class="tick target"></div></div>
+        </div>
+        <div class="mtabs" role="tablist" aria-label="תצוגת גיליון">
+          <button type="button" role="tab" data-tab-btn="params" aria-selected="true">פרמטרים</button>
+          <button type="button" role="tab" data-tab-btn="detail" aria-selected="false">פירוט</button>
+          <button type="button" role="tab" data-tab-btn="tech" aria-selected="false">נתונים</button>
+        </div>
+      </div>
+
+      <aside class="params" aria-label="פרמטרים">
+        <div class="tabs" role="tablist" aria-label="לוח צד">
+          <button type="button" role="tab" data-tab-btn="params" aria-selected="true">פרמטרים</button>
+          <button type="button" role="tab" data-tab-btn="tech" aria-selected="false">נתונים טכניים</button>
+        </div>
+        <div class="pbody">
+          <div class="panel-params" role="tabpanel">
+
+            <section class="card">
+              <div class="card-title">מה קובע את החלון?</div>
+              <div class="seg" role="group" aria-label="מצב עבודה">
+                <button type="button" id="modeGlass" aria-pressed="true">אחוז זכוכית</button>
+                <button type="button" id="modeWin" aria-pressed="false">גובה חלון</button>
+              </div>
+              <div class="ctl" data-k="r"></div>
+              <div class="ctl" data-k="wh"></div>
+            </section>
+
+            <details class="sec" open>
+              <summary>
+                <span class="sec-h"><span class="sec-t">קומה ורשת חזית</span><span class="sec-s" id="sumGrid"></span></span>
+                <svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              </summary>
+              <div class="sec-body">
+                <div class="ctl" data-k="A"></div>
+                <div class="ctl" data-k="bt"></div>
+                <div class="ctl" data-k="nf"></div>
+                <div class="ctl" data-k="f"></div>
+              </div>
+            </details>
+
+            <details class="sec">
+              <summary>
+                <span class="sec-h"><span class="sec-t">חלון</span><span class="sec-s" id="sumWin"></span></span>
+                <svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              </summary>
+              <div class="sec-body">
+                <div class="ctl" data-k="ww"></div>
+                <div class="ctl" data-k="s"></div>
+                <div class="ctl" data-k="m"></div>
+                <div class="ctl" data-k="e"></div>
+                <div class="ctl" data-k="fr"></div>
+              </div>
+            </details>
+
+            <details class="sec">
+              <summary>
+                <span class="sec-h"><span class="sec-t">תקרה וסף ייחוס</span><span class="sec-s" id="sumRef"></span></span>
+                <svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              </summary>
+              <div class="sec-body">
+                <div class="ctl" data-k="t"></div>
+                <div class="ctl" data-k="th"></div>
+              </div>
+            </details>
+          </div>
+
+          <div class="panel-tech" role="tabpanel" id="panelTech" tabindex="-1">
+            <dl class="techgrid" id="tech"></dl>
+            <p class="tech-note">זכוכית נראית בלבד, בלי מסגרות, חלקי שטח החזית כולו מרצפה לרצפה.</p>
+          </div>
+        </div>
+      </aside>
+
+      <aside class="result" aria-label="תוצאה">
+        <div class="r-head" aria-live="polite">
+          <div class="r-label">זכוכית נראית מתוך החזית</div>
+          <div class="big" id="big"><span class="v" id="bigVal">–</span><span class="pc">%</span></div>
+          <div class="chips"><span class="chip" id="chipTh"></span><span class="chip" id="chipTarget"></span></div>
+        </div>
+
+        <div class="r-barwrap">
+          <div class="bar" id="barMain"><div class="track"><div class="g"></div><div class="f"></div></div><div class="tick th"></div><div class="tick target"></div></div>
+          <div class="ticklegend">
+            <span><i class="tk-th"></i>סף ייחוס <span class="num" id="lblTh"></span></span>
+            <span id="lblTargetWrap"><i class="tk-tg"></i>יעד <span class="num" id="lblTarget"></span></span>
+          </div>
+        </div>
+
+        <div class="r-legend">
+          <div><i class="sw-g"></i><span>זכוכית</span><span class="num" id="lgG"></span></div>
+          <div><i class="sw-f"></i><span>מסגרות</span><span class="num" id="lgF"></span></div>
+          <div><i class="sw-w"></i><span>קיר ותקרות</span><span class="num" id="lgW"></span></div>
+        </div>
+
+        <div class="callout" id="callout">
+          <svg class="ico i-warn" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>
+          <svg class="ico i-ok" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+          <div id="calloutText"></div>
+        </div>
+
+        <div class="r-win">
+          <div class="bay" id="bay" aria-hidden="true"><div class="slab"></div><div class="win"></div></div>
+          <dl>
+            <div><dt class="ttl">חלון טיפוסי</dt></div>
+            <div><dt>פתח</dt><dd class="num" id="wOpen"></dd></div>
+            <div><dt>זכוכית</dt><dd class="num" id="wGlass"></dd></div>
+            <div><dt>שטח זכוכית</dt><dd class="num" id="wArea"></dd></div>
+          </dl>
+        </div>
+
+        <div class="r-figs">
+          <div><span class="num" id="fNb"></span><span>חלונות בקומה</span></div>
+          <div><span class="num" id="fNt"></span><span>חלונות בחזית</span></div>
+          <div><span class="num" id="fGa"></span><span>מ״ר זכוכית</span></div>
+          <div><span class="num" id="fFa"></span><span>מ״ר חזית</span></div>
+        </div>
+
+        <button type="button" class="linkbtn" id="toTech">כל הנתונים הטכניים
+          <svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+// ---------- parameters: same ranges and defaults as "Window-to-Wall Ratio V5.gh" ----------
+const DEF = {
+  A:{label:"שטח קומה", unit:"מ״ר", min:600,max:3000,step:10,val:1400,dec:0, hint:"שטח קומה טיפוסית ברוטו. קבוע, ורוחב החזית הוא השורש שלו"},
+  bt:{label:"מפתח", unit:"מ׳", min:1.35,max:3,step:0.05,val:1.60,dec:2, hint:"חלון ועוד רווח. נשמר בדיוק, והקצוות סופגים את השארית"},
+  nf:{label:"קומות", unit:"", min:1,max:60,step:1,val:10,dec:0, hint:"מספר הקומות בחזית"},
+  f:{label:"גובה קומה", unit:"מ׳", min:3,max:5,step:0.05,val:4.00,dec:2, hint:"מרצפה לרצפה. אחוז הזכוכית נמדד מול גובה זה"},
+  r:{label:"אחוז זכוכית מבוקש", unit:"%", min:5,max:80,step:1,val:44,dec:0, hint:"זכוכית נראית מתוך כל החזית. גובה החלון מחושב לבד"},
+  wh:{label:"גובה חלון", unit:"מ׳", min:0.3,max:5,step:0.05,val:0.30,dec:2, hint:"גובה הפתח כולל מסגרת. נעצר בתחתית התקרה"},
+  ww:{label:"רוחב חלון", unit:"מ׳", min:0.3,max:3,step:0.05,val:0.90,dec:2, hint:"רוחב הפתח כולל מסגרת. מוגבל למפתח פחות הרווח המינימלי"},
+  s:{label:"אדן מינימלי", unit:"מ׳", min:0,max:1.5,step:0.05,val:0,dec:2, hint:"החלון ממורכז בגובה הקומה. האדן דוחף אותו למעלה רק אם צריך"},
+  m:{label:"רווח מינימלי בין חלונות", unit:"מ׳", min:0.1,max:3,step:0.05,val:0.75,dec:2, hint:"משפיע רק על רוחב החלון"},
+  e:{label:"קצה מינימלי", unit:"מ׳", min:0.3,max:1.5,step:0.05,val:0.40,dec:2, hint:"אם הקצה בפינת החזית קטן מזה, יורד חלון אחד"},
+  fr:{label:"מסגרת", unit:"מ׳", min:0.05,max:0.2,step:0.01,val:0.08,dec:2, hint:"רוחב הפרופיל סביב הזכוכית"},
+  t:{label:"עובי תקרה", unit:"מ׳", min:0.2,max:0.8,step:0.05,val:0.40,dec:2, hint:"רצועת התקרה בחלק העליון של כל קומה"},
+  th:{label:"סף ייחוס", unit:"%", min:20,max:70,step:1,val:27,dec:0, hint:"מעל הסף, אחוז הזכוכית נצבע באדום"}
+};
+const P = {}; Object.keys(DEF).forEach(k => P[k] = DEF[k].val);
+let windowDrives = false; // V5 toggle = False
+
+// ---------- logic, ported 1:1 from the Grasshopper expressions ----------
+function roundHalfEven(v){ const r = Math.round(v); return (Math.abs(v - Math.trunc(v)) === 0.5 && r % 2 !== 0) ? r - 1 : r; }
+const r5 = x => roundHalfEven(x * 20) / 20;
+function compute(p, winMode){
+  const side = Math.sqrt(p.A);
+  const b = roundHalfEven(p.bt * 20) / 20;
+  const wwR = r5(p.ww), whR = r5(p.wh), sR = r5(p.s), mR = r5(p.m);
+  const w = Math.max(0.3, Math.min(wwR, b - mR));
+  const nb = Math.max(1, Math.floor((side - 2 * p.e + b - w) / b));
+  const x0 = (side - nb * b + b - w) / 2;
+  const hmax = p.f - sR - p.t;
+  const hreq = (p.r / 100) * side * p.f / (nb * Math.max(0.01, w - 2 * p.fr)) + 2 * p.fr;
+  const h = Math.max(0, winMode ? Math.min(whR, hmax) : Math.min(r5(hreq), hmax));
+  const gw = Math.max(0, w - 2 * p.fr), gh = Math.max(0, h - 2 * p.fr);
+  const glass = 100 * nb * gw * gh / (side * p.f);
+  const gross = 100 * nb * w * h / (side * p.f);
+  const bottom = Math.max(sR, Math.floor(((p.f - p.t - h) / 2) * 20) / 20);
+  const E = 1e-4;
+  let status;
+  if (winMode) status = Math.max(wwR - (b - mR), whR - hmax) > E ? "החלון הוגבל לגודל המרבי" : "גודל החלון לפי ההגדרה";
+  else if (r5(hreq) - hmax > E) status = "מוגבל: היעד לא ניתן להשגה בגובה הקומה";
+  else if (wwR - (b - mR) > E) status = "היעד הושג, והחלון צר מהמבוקש";
+  else status = "היעד הושג";
+  // extra read-outs for the UI (no change to the model)
+  const wLimited = wwR - (b - mR) > E;
+  const hCapped = winMode ? whR - hmax > E : r5(hreq) - hmax > E;
+  return {side, b, w, nb, x0, hmax, h, gw, gh, glass, gross, bottom, gap: b - w,
+          status, glassArea: nb * gw * gh * p.nf, facadeArea: side * p.f * p.nf,
+          W: side, H: p.f * p.nf, hreq: r5(hreq), wLimited, hCapped};
+}
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const fmt = (v, d) => Number(v).toFixed(d);
+const fmtK = (v, d) => Number(v).toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d});
+function num(v, d, u){ return '<span class="num">' + fmt(v, d) + (u || "") + '</span>'; }
+const INFO = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>';
+const esc = s => s.replace(/"/g, "&quot;");
+
+// ---------- controls ----------
+const inputs = {}, nums = {}, ctls = {};
+function snap(k, v){
+  const d = DEF[k];
+  v = Math.min(d.max, Math.max(d.min, v));
+  v = d.min + Math.round((v - d.min) / d.step) * d.step;
+  return parseFloat(v.toFixed(4));
+}
+document.querySelectorAll(".ctl").forEach(el => {
+  const k = el.dataset.k, d = DEF[k], id = "in_" + k;
+  el.innerHTML =
+    '<div class="row"><label for="' + id + '">' + d.label + '</label>' +
+    '<button type="button" class="info" data-tip="' + esc(d.hint) + '" aria-label="' + esc(d.label + ": " + d.hint) + '">' + INFO + '</button>' +
+    '<span class="tag">מחושב</span>' +
+    '<span class="field"><input type="text" inputmode="decimal" class="num" id="n_' + k + '" aria-label="' + esc(d.label + (d.unit ? ", " + d.unit : "")) + '">' +
+    (d.unit ? '<span class="u">' + d.unit + '</span>' : '') + '</span></div>' +
+    '<input type="range" id="' + id + '" min="' + d.min + '" max="' + d.max + '" step="' + d.step + '">';
+  const inp = el.querySelector('input[type=range]'), n = el.querySelector('.field input');
+  inp.value = P[k];
+  inp.addEventListener("input", () => { P[k] = parseFloat(inp.value); update(); });
+  const commit = () => {
+    const v = parseFloat(String(n.value).replace(",", "."));
+    if (isFinite(v)) P[k] = snap(k, v);
+    update();
+  };
+  n.addEventListener("change", commit);
+  n.addEventListener("focus", () => n.select());
+  n.addEventListener("keydown", e => {
+    if (e.key === "Enter") { commit(); n.select(); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      P[k] = snap(k, P[k] + (e.key === "ArrowUp" ? 1 : -1) * d.step * (e.shiftKey ? 10 : 1));
+      update(); n.select();
+    }
+  });
+  inputs[k] = inp; nums[k] = n; ctls[k] = el;
+});
+function syncOutputs(R){
+  Object.keys(DEF).forEach(k => {
+    const d = DEF[k];
+    const computed = (k === "wh" && !windowDrives) || (k === "r" && windowDrives);
+    let v = P[k], dec = d.dec;
+    if (k === "wh" && !windowDrives) v = R.h;                      // show the window the model produced
+    if (k === "r" && windowDrives) { v = R.glass; dec = 1; }       // show the glass the window produces
+    inputs[k].value = v;
+    const pct = (Math.min(d.max, Math.max(d.min, v)) - d.min) / (d.max - d.min) * 100;
+    inputs[k].style.setProperty("--p", pct + "%");
+    if (document.activeElement !== nums[k]) nums[k].value = fmt(v, dec);
+    ctls[k].dataset.computed = String(computed);
+    inputs[k].disabled = computed; nums[k].disabled = computed;
+  });
+  $("modeGlass").setAttribute("aria-pressed", String(!windowDrives));
+  $("modeWin").setAttribute("aria-pressed", String(windowDrives));
+  $("sumGrid").innerHTML = num(P.A, 0) + " מ״ר · מפתח " + num(P.bt, 2) + " · " + num(P.nf, 0) + " קומות · " + num(P.f, 2) + " מ׳";
+  $("sumWin").innerHTML = "רוחב " + num(P.ww, 2) + " · אדן " + num(P.s, 2) + " · רווח " + num(P.m, 2) + " · קצה " + num(P.e, 2) + " · מסגרת " + num(P.fr, 2);
+  $("sumRef").innerHTML = "תקרה " + num(P.t, 2) + " מ׳ · סף " + num(P.th, 0, "%");
+}
+$("modeGlass").addEventListener("click", () => { windowDrives = false; update(); });
+$("modeWin").addEventListener("click", () => {
+  if (!windowDrives) { P.wh = r5(compute(P, false).h) || DEF.wh.min; } // start from the current window, no jump
+  windowDrives = true; update();
+});
+$("reset").addEventListener("click", () => {
+  Object.keys(DEF).forEach(k => P[k] = DEF[k].val); windowDrives = false; update(true);
+});
+$("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark"; applyTheme();
+});
+
+// ---------- tabs (sidebar on desktop, sheet on mobile) ----------
+const work = $("work");
+function setTab(t){
+  work.dataset.tab = t;
+  document.querySelectorAll(".tabs [data-tab-btn]").forEach(b => b.setAttribute("aria-selected", String((b.dataset.tabBtn === "tech") === (t === "tech"))));
+  document.querySelectorAll(".mtabs [data-tab-btn]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tabBtn === t)));
+}
+document.querySelectorAll("[data-tab-btn]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tabBtn)));
+$("toTech").addEventListener("click", () => { setTab("tech"); $("panelTech").focus({preventScroll:false}); });
+
+// ---------- 3D ----------
+const canvas = $("view"), stage = $("stage");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 5000);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const mats = {
+  wall: new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),
+  frame: new THREE.MeshBasicMaterial({side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}),
+  glass: new THREE.MeshBasicMaterial({side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}),
+  slab: new THREE.MeshBasicMaterial({side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}),
+  line: new THREE.LineBasicMaterial({}),
+  ground: new THREE.LineBasicMaterial({}),
+  dim: new THREE.LineBasicMaterial({})
+};
+function applyTheme(){
+  mats.wall.color.set(css("--stone")); mats.frame.color.set(css("--frame"));
+  mats.glass.color.set(css("--glass")); mats.slab.color.set(css("--slab"));
+  mats.line.color.set(css("--line3d")); mats.ground.color.set(css("--ink")); mats.dim.color.set(css("--line3d"));
+  render();
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+
+const unit = new THREE.PlaneGeometry(1, 1);
+let group = new THREE.Group(); scene.add(group);
+function disposeGroup(){
+  group.traverse(o => { if (o.geometry && o.geometry !== unit) o.geometry.dispose(); });
+  scene.remove(group); group = new THREE.Group(); scene.add(group);
+}
+function instanced(mat, items, z){
+  const mesh = new THREE.InstancedMesh(unit, mat, Math.max(1, items.length));
+  const m4 = new THREE.Matrix4();
+  items.forEach((it, i) => { m4.makeScale(it.w, it.h, 1); m4.setPosition(it.x + it.w / 2, it.y + it.h / 2, z); mesh.setMatrixAt(i, m4); });
+  mesh.count = items.length; mesh.instanceMatrix.needsUpdate = true;
+  return mesh;
+}
+const dimOff = (W, H) => Math.max(0.9, Math.max(W, H) * 0.035);
+let dims = null;
+function buildFacade(R){
+  disposeGroup();
+  const {W, H} = R;
+  const wall = new THREE.Mesh(unit, mats.wall); wall.scale.set(W, H, 1); wall.position.set(W / 2, H / 2, 0); group.add(wall);
+  const slabs = [], frames = [], glass = [];
+  for (let j = 0; j < P.nf; j++){
+    slabs.push({x:0, y:j * P.f + P.f - P.t, w:W, h:P.t});
+    if (R.h <= 0) continue;
+    const y = j * P.f + R.bottom;
+    for (let i = 0; i < R.nb; i++){
+      const x = R.x0 + i * R.b;
+      frames.push({x, y, w:R.w, h:R.h});
+      if (R.gw > 0 && R.gh > 0) glass.push({x:x + P.fr, y:y + P.fr, w:R.gw, h:R.gh});
+    }
+  }
+  group.add(instanced(mats.slab, slabs, 0.01));
+  if (frames.length) group.add(instanced(mats.frame, frames, 0.02));
+  if (glass.length) group.add(instanced(mats.glass, glass, 0.03));
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), mats.line);
+  outline.position.set(W / 2, H / 2, 0.04); group.add(outline);
+  const ground = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-W * 0.15, 0, 0.04), new THREE.Vector3(W * 1.15, 0, 0.04)]);
+  group.add(new THREE.Line(ground, mats.ground));
+  // dimension lines (width below, height beside) and level ticks
+  const off = dimOff(W, H), tk = off * 0.3, z = 0.04, pts = [];
+  const seg = (x1, y1, x2, y2) => pts.push(new THREE.Vector3(x1, y1, z), new THREE.Vector3(x2, y2, z));
+  seg(0, -off, W, -off); seg(0, -off - tk, 0, -off + tk); seg(W, -off - tk, W, -off + tk);
+  group.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mats.dim));
+  dims = {W, H, off, tk, f:P.f, nf:P.nf};
+  $("lblW").textContent = fmt(W, 2) + " m · " + R.nb + " × " + fmt(R.b, 2);
+}
+
+// screen-space labels that follow the model
+const lblW = $("lblW");
+let stageW = 1, stageH = 1;
+const pv = new THREE.Vector3();
+function proj(x, y){
+  pv.set(x, y, 0.04).project(camera);
+  if (pv.z > 1 || pv.z < -1) return null;
+  return {x:(pv.x + 1) / 2 * stageW, y:(1 - pv.y) / 2 * stageH};
+}
+function place(el, p, shift){
+  if (!p || p.x < -80 || p.y < -40 || p.x > stageW + 80 || p.y > stageH + 40) { el.style.display = "none"; return; }
+  el.style.display = "";
+  el.style.transform = "translate(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px) " + shift;
+}
+function drawLabels(){
+  if (!dims) return;
+  const {W, H, off, tk, f, nf} = dims;
+  place(lblW, proj(W / 2, -off), "translate(-50%,-50%)");
+}
+
+// simple orbit controls (no external add-on needed)
+const orbit = {target:new THREE.Vector3(), dist:100, az:0, el:0};
+function placeCamera(){
+  const c = Math.cos(orbit.el);
+  camera.position.set(orbit.target.x + orbit.dist * c * Math.sin(orbit.az),
+                      orbit.target.y + orbit.dist * Math.sin(orbit.el),
+                      orbit.target.z + orbit.dist * c * Math.cos(orbit.az));
+  camera.lookAt(orbit.target); render();
+}
+function fit(az, el){
+  const {W, H} = lastR, off = dimOff(W, H);
+  orbit.target.set(W / 2, H / 2 - off * 0.5, 0);
+  const vf = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const hFrac = Math.max(0.3, (stageH - pad.top - pad.bottom) / stageH);
+  const dH = ((H + off * 2) / 2) / (Math.tan(vf) * hFrac) * 1.12;
+  const dW = ((W + off * 2) / 2) / (Math.tan(vf) * camera.aspect) * 1.18;
+  orbit.dist = Math.max(dH, dW); orbit.az = az; orbit.el = el; placeCamera();
+}
+function setView(which){
+  $("vFront").setAttribute("aria-pressed", String(which === "front"));
+  $("v3d").setAttribute("aria-pressed", String(which === "3d"));
+}
+let drag = null; const pts = new Map();
+canvas.addEventListener("pointerdown", e => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.clientX, y:e.clientY}); drag = {x:e.clientX, y:e.clientY, pan:e.shiftKey || e.button === 2}; });
+canvas.addEventListener("pointermove", e => {
+  if (!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId); pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pts.size === 2){
+    const [a, b] = [...pts.values()]; const other = [...pts.entries()].find(([id]) => id !== e.pointerId)[1];
+    const d0 = Math.hypot(prev.x - other.x, prev.y - other.y), d1 = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d0 > 0) { orbit.dist *= d0 / d1; placeCamera(); } return;
+  }
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  if (drag && drag.pan){
+    const s = orbit.dist * 0.0016;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+    orbit.target.addScaledVector(right, -dx * s).addScaledVector(up, dy * s);
+  } else {
+    orbit.az -= dx * 0.006; orbit.el = Math.max(-1.2, Math.min(1.2, orbit.el + dy * 0.006));
+    if (dx || dy) setView(null);
+  }
+  placeCamera();
+});
+const endPtr = e => { pts.delete(e.pointerId); if (!pts.size) drag = null; };
+canvas.addEventListener("pointerup", endPtr); canvas.addEventListener("pointercancel", endPtr);
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+canvas.addEventListener("wheel", e => { e.preventDefault(); orbit.dist *= Math.exp(e.deltaY * 0.0012); placeCamera(); }, {passive:false});
+$("vFront").addEventListener("click", () => { setView("front"); fit(0, 0); });
+$("v3d").addEventListener("click", () => { setView("3d"); fit(-0.62, 0.22); });
+$("zIn").addEventListener("click", () => { orbit.dist *= 0.8; placeCamera(); });
+$("zOut").addEventListener("click", () => { orbit.dist *= 1.25; placeCamera(); });
+$("zFit").addEventListener("click", () => fit(orbit.az, orbit.el));
+
+let lastStage = "", pad = {top:64, bottom:40};
+function resize(){
+  const r = stage.getBoundingClientRect();
+  stageW = Math.max(1, r.width); stageH = Math.max(1, r.height);
+  renderer.setSize(stageW, stageH, false);
+  camera.aspect = stageW / stageH;
+  // keep the facade clear of the view toggle (top) and the hint / sheet edge (bottom)
+  const mobile = matchMedia("(max-width: 899px)").matches;
+  pad = {top: mobile ? 62 : 64, bottom: mobile ? 26 : 40};
+  camera.setViewOffset(stageW, stageH, 0, -(pad.top - pad.bottom) / 2, stageW, stageH);
+  camera.updateProjectionMatrix();
+  const key = Math.round(stageW) + "x" + Math.round(stageH);
+  if (lastR && key !== lastStage) { lastStage = key; fit(orbit.az, orbit.el); } else render();
+}
+new ResizeObserver(resize).observe(stage);
+function render(){ renderer.render(scene, camera); drawLabels(); }
+
+// ---------- result panel ----------
+function setBar(bar, R){
+  const frame = Math.max(0, R.gross - R.glass);
+  bar.querySelector(".g").style.width = Math.min(100, R.glass) + "%";
+  bar.querySelector(".f").style.width = Math.min(100 - Math.min(100, R.glass), frame) + "%";
+  bar.querySelector(".tick.th").style.insetInlineStart = P.th + "%";
+  const tg = bar.querySelector(".tick.target");
+  tg.style.display = windowDrives ? "none" : "";
+  tg.style.insetInlineStart = P.r + "%";
+}
+function updateReading(R){
+  const over = R.glass > P.th + 1e-9;
+  const g = fmt(R.glass, 1);
+  $("bigVal").textContent = g; $("mVal").textContent = g;
+  $("big").classList.toggle("over", over); $("mBig").classList.toggle("over", over);
+
+  const thTxt = num(P.th, 0, "%");
+  const chipTh = $("chipTh"), mChip = $("mChip");
+  chipTh.className = mChip.className = "chip " + (over ? "alert" : "ok");
+  chipTh.innerHTML = '<span class="dot"></span>' + (over ? "מעל סף הייחוס " : "בתוך סף הייחוס ") + thTxt;
+  mChip.innerHTML = '<span class="dot"></span>' + (over ? "מעל סף " : "בתוך סף ") + thTxt;
+  const chipT = $("chipTarget");
+  if (windowDrives) chipT.innerHTML = "חלון " + num(R.w, 2) + " × " + num(R.h, 2) + " מ׳";
+  else chipT.innerHTML = "יעד " + num(P.r, 0, "%") + " · " + (R.hCapped ? "לא הושג" : "הושג");
+
+  setBar($("barMain"), R);
+  setBar(document.querySelector(".bar.mini"), R);
+  $("lblTh").textContent = fmt(P.th, 0) + "%";
+  $("lblTarget").textContent = fmt(P.r, 0) + "%";
+  $("lblTargetWrap").style.display = windowDrives ? "none" : "";
+
+  const frame = Math.max(0, R.gross - R.glass);
+  $("lgG").textContent = fmt(R.glass, 1) + "%";
+  $("lgF").textContent = fmt(frame, 1) + "%";
+  $("lgW").textContent = fmt(100 - R.gross, 1) + "%";
+
+  // what happened, in one sentence
+  let tone = "ok", html;
+  if (R.h <= 0) { tone = "warn"; html = "<b>אין מקום לחלון.</b> גובה הקומה פחות התקרה והאדן קטן מאפס."; }
+  else if (!windowDrives) {
+    if (R.hCapped) { tone = "warn"; html = "<b>היעד לא הושג בגובה הקומה.</b> ל־" + num(P.r, 0, "%") + " החלון צריך " + num(R.hreq, 2) + " מ׳, והמרבי הוא " + num(R.hmax, 2) + " מ׳."; }
+    else html = "<b>היעד הושג.</b> גובה החלון " + num(R.h, 2) + " מ׳ מתוך " + num(R.hmax, 2) + " מ׳ אפשריים.";
+  } else {
+    if (R.hCapped || R.wLimited) { tone = "warn"; html = "<b>החלון הוגבל לגודל המרבי.</b>" + (R.hCapped ? " הגובה נעצר ב־" + num(R.hmax, 2) + " מ׳, מתחת לתקרה." : ""); }
+    else html = "<b>גודל החלון לפי ההגדרה.</b> " + num(R.w, 2) + " × " + num(R.h, 2) + " מ׳.";
+  }
+  if (R.wLimited && R.h > 0) html += " הרוחב הוגבל ל־" + num(R.w, 2) + " מ׳ (מפתח פחות רווח מינימלי).";
+  $("callout").className = "callout " + tone;
+  $("calloutText").innerHTML = html;
+
+  // one bay, drawn to scale
+  const s = 112 / P.f, bay = $("bay"), win = bay.querySelector(".win");
+  bay.style.width = (R.b * s).toFixed(1) + "px";
+  bay.querySelector(".slab").style.height = (P.t * s).toFixed(1) + "px";
+  win.style.display = R.h > 0 ? "" : "none";
+  win.style.width = (R.w * s).toFixed(1) + "px";
+  win.style.height = (R.h * s).toFixed(1) + "px";
+  win.style.left = ((R.b - R.w) / 2 * s).toFixed(1) + "px";
+  win.style.bottom = (R.bottom * s).toFixed(1) + "px";
+  win.style.borderWidth = Math.max(1, P.fr * s).toFixed(1) + "px";
+  $("wOpen").textContent = fmt(R.w, 2) + " × " + fmt(R.h, 2) + " m";
+  $("wGlass").textContent = fmt(R.gw, 2) + " × " + fmt(R.gh, 2) + " m";
+  $("wArea").textContent = fmt(R.gw * R.gh, 2) + " m²";
+
+  $("fNb").textContent = R.nb;
+  $("fNt").textContent = fmtK(R.nb * P.nf, 0);
+  $("fGa").textContent = fmtK(R.glassArea, 1);
+  $("fFa").textContent = fmtK(R.facadeArea, 1);
+
+  const rows = [
+    ["מצב", R.status],
+    ["זכוכית נראית", num(R.glass, 1, "%")],
+    ["אחוז פתחים כולל מסגרת (לפי ASHRAE)", num(R.gross, 1, "%")],
+    ["צלע הקומה", num(R.side, 2, " מ׳")], ["מפתח בפועל", num(R.b, 2, " מ׳")],
+    ["רוחב חלון בפועל", num(R.w, 2, " מ׳")], ["גובה חלון בפועל", num(R.h, 2, " מ׳")],
+    ["רווח בין חלונות", num(R.gap, 2, " מ׳")], ["קצה בפועל", num(R.x0, 2, " מ׳")],
+    ["חלונות בקומה", num(R.nb, 0)], ["חלונות בחזית", num(R.nb * P.nf, 0)],
+    ["שטח זכוכית כולל", num(R.glassArea, 1, " מ״ר")], ["שטח חזית", num(R.facadeArea, 1, " מ״ר")],
+    ["גובה חלון מרבי", num(R.hmax, 2, " מ׳")]
+  ];
+  $("tech").innerHTML = rows.map(r => "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>").join("");
+}
+
+// ---------- update loop ----------
+let lastR = null, lastSize = "";
+function update(forceFit){
+  const R = compute(P, windowDrives);
+  syncOutputs(R);
+  const size = R.W.toFixed(3) + "x" + R.H.toFixed(3);
+  lastR = R; buildFacade(R); updateReading(R);
+  if (forceFit || size !== lastSize){ lastSize = size; fit(orbit.az, orbit.el); } else render();
+}
+applyTheme(); resize(); update(true);
+})();
+</script>
+</body>
+</html>
